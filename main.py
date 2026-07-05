@@ -23,7 +23,8 @@ class Event(BaseModel):
 
 class AnalyticsRequest(BaseModel):
     events: List[Event]
-
+    
+@app.post("/")
 @app.post("/analytics")
 def analytics(
     data: AnalyticsRequest,
