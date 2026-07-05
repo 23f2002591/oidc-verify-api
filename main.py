@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -27,22 +27,25 @@ class AnalyticsRequest(BaseModel):
 @app.post("/analytics")
 def analytics(
     data: AnalyticsRequest,
-    x_api_key: str = Header(None)
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ):
+    # Reject missing or incorrect API key
     if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized"
+        )
 
     total_events = len(data.events)
-    unique_users = len(set(e.user for e in data.events))
-
+    unique_users = len({e.user for e in data.events})
     revenue = sum(e.amount for e in data.events if e.amount > 0)
 
-    user_totals = {}
+    totals = {}
     for e in data.events:
         if e.amount > 0:
-            user_totals[e.user] = user_totals.get(e.user, 0) + e.amount
+            totals[e.user] = totals.get(e.user, 0) + e.amount
 
-    top_user = max(user_totals, key=user_totals.get) if user_totals else ""
+    top_user = max(totals, key=totals.get) if totals else ""
 
     return {
         "email": EMAIL,
